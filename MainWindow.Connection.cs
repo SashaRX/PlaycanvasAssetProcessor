@@ -123,19 +123,13 @@ namespace AssetProcessor {
                 // Re-scan file statuses to detect deleted files
                 RescanFileStatuses();
 
-                bool hasUpdates = await CheckForUpdates();
-                bool hasMissingFiles = HasMissingFiles();
+                var refreshResult = await connectionWorkflowCoordinator.EvaluateRefreshAsync(CheckForUpdates, HasMissingFiles);
 
-                if (hasUpdates || hasMissingFiles) {
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    string message = hasUpdates && hasMissingFiles
-                        ? "Updates available and missing files found! Click Download to get them."
-                        : hasUpdates
-                            ? "Updates available! Click Download to get them."
-                            : $"Missing files found! Click Download to get them.";
-                    MessageBox.Show(message, "Download Required", MessageBoxButton.OK, MessageBoxImage.Information);
+                if (refreshResult.State == ConnectionState.NeedsDownload) {
+                    UpdateConnectionButton(refreshResult.State);
+                    MessageBox.Show(refreshResult.Message, "Download Required", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {
-                    MessageBox.Show("Project is up to date!", "No Updates", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show(refreshResult.Message, "No Updates", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
             } catch (Exception ex) {
                 MessageBox.Show($"Error checking for updates: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -167,15 +161,11 @@ namespace AssetProcessor {
 
                     await Download(null, null);
 
-                    bool stillHasUpdates = await CheckForUpdates();
-                    bool stillHasMissingFiles = HasMissingFiles();
-
-                    if (stillHasUpdates || stillHasMissingFiles) {
-                        UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    } else {
+                    var postDownloadResult = await connectionWorkflowCoordinator.EvaluatePostDownloadAsync(CheckForUpdates, HasMissingFiles);
+                    if (postDownloadResult.State == ConnectionState.UpToDate) {
                         logService.LogInfo("Download complete, project is up to date");
-                        UpdateConnectionButton(ConnectionState.UpToDate);
                     }
+                    UpdateConnectionButton(postDownloadResult.State);
                 } else {
                     logger.Warn("DownloadFromServer: cancellationTokenSource is null");
                 }
@@ -211,30 +201,28 @@ namespace AssetProcessor {
                 }
 
                 ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
-                if (string.IsNullOrEmpty(projectsResult.UserId)) {
-                    throw new Exception("User ID is null or empty");
+                var loadValidation = connectionWorkflowCoordinator.ValidateProjectsLoad(projectsResult);
+                if (!loadValidation.IsValid) {
+                    throw new Exception(loadValidation.ErrorMessage);
                 }
 
-                await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {projectsResult.UserId}"));
+                await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {loadValidation.UserId}"));
 
-                if (projectsResult.Projects.Count == 0) {
+                var projectsBinding = connectionWorkflowCoordinator.BuildProjectsBinding(
+                    projectsResult.Projects,
+                    projectsResult.SelectedProjectId);
+                if (!projectsBinding.HasProjects) {
                     throw new Exception("Project list is empty");
                 }
 
                 viewModel.Projects.Clear();
-                foreach (KeyValuePair<string, string> project in projectsResult.Projects) {
+                foreach (var project in projectsBinding.Projects) {
                     viewModel.Projects.Add(project);
                 }
 
                 projectSelectionService.SetProjectInitializationInProgress(true);
                 try {
-                    if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
-                        viewModel.SelectedProjectId = projectsResult.SelectedProjectId;
-                    } else if (viewModel.Projects.Count > 0) {
-                        viewModel.SelectedProjectId = viewModel.Projects[0].Key;
-                    } else {
-                        viewModel.SelectedProjectId = null;
-                    }
+                    viewModel.SelectedProjectId = projectsBinding.SelectedProjectId;
                 } finally {
                     projectSelectionService.SetProjectInitializationInProgress(false);
                 }
@@ -253,39 +241,41 @@ namespace AssetProcessor {
 
         private async Task CheckProjectState() {
             try {
-                if (string.IsNullOrEmpty(ProjectFolderPath) || string.IsNullOrEmpty(ProjectName)) {
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    return;
-                }
+                bool hasProjectFolder = !string.IsNullOrEmpty(ProjectFolderPath);
+                bool hasProjectName = !string.IsNullOrEmpty(ProjectName);
+                bool assetsListExists = hasProjectFolder
+                    && File.Exists(Path.Combine(ProjectFolderPath!, "assets_list.json"));
 
-                string assetsListPath = Path.Combine(ProjectFolderPath!, "assets_list.json");
-
-                if (!File.Exists(assetsListPath)) {
+                if (!assetsListExists) {
                     logService.LogInfo("Project not downloaded yet — assets_list.json not found");
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
-                    return;
+                } else {
+                    logService.LogInfo("Loading local assets...");
+                    await LoadAssetsFromJsonFileAsync();
+
+                    await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath!);
                 }
 
-                logService.LogInfo("Loading local assets...");
-                await LoadAssetsFromJsonFileAsync();
+                bool hasUpdates = assetsListExists && await CheckForUpdates();
+                bool hasMissingFiles = assetsListExists && HasMissingFiles();
+                var stateResult = connectionWorkflowCoordinator.EvaluateProjectState(
+                    hasProjectFolder,
+                    hasProjectName,
+                    assetsListExists,
+                    hasUpdates,
+                    hasMissingFiles);
 
-                if (!string.IsNullOrEmpty(ProjectFolderPath)) {
-                    await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
-                }
-
-                bool hasUpdates = await CheckForUpdates();
-                bool hasMissingFiles = HasMissingFiles();
-
-                if (hasUpdates || hasMissingFiles) {
-                    string reason = hasUpdates && hasMissingFiles
+                if (stateResult.State == ConnectionState.NeedsDownload) {
+                    string reason = stateResult.HasUpdates && stateResult.HasMissingFiles
                         ? "updates available and missing files"
-                        : hasUpdates ? "updates available" : "missing files";
+                        : stateResult.HasUpdates
+                            ? "updates available"
+                            : "missing files or project is not downloaded";
                     logService.LogInfo($"CheckProjectState: {reason}");
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
                 } else {
                     logService.LogInfo("Project is up to date");
-                    UpdateConnectionButton(ConnectionState.UpToDate);
                 }
+
+                UpdateConnectionButton(stateResult.State);
             } catch (Exception ex) {
                 logger.Error(ex, "Error in CheckProjectState");
                 logService.LogError($"Error checking project state: {ex.Message}");
@@ -492,45 +482,75 @@ namespace AssetProcessor {
             try {
                 string? selectedProjectId = viewModel.SelectedProjectId;
                 string? selectedBranchId = viewModel.SelectedBranchId;
-                if (string.IsNullOrEmpty(selectedProjectId) || string.IsNullOrEmpty(selectedBranchId)) {
-                    UpdateConnectionButton(ConnectionState.Disconnected);
+                bool hasSelection = !string.IsNullOrEmpty(selectedProjectId) && !string.IsNullOrEmpty(selectedBranchId);
+                if (!hasSelection) {
+                    UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
+                        hasSelection: false,
+                        hasProjectPath: false,
+                        assetsLoaded: false,
+                        updatesCheckSucceeded: false,
+                        hasUpdates: false));
                     return;
                 }
 
-                if (string.IsNullOrEmpty(ProjectFolderPath)) {
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                bool hasProjectPath = !string.IsNullOrEmpty(ProjectFolderPath);
+                if (!hasProjectPath) {
+                    UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
+                        hasSelection: true,
+                        hasProjectPath: false,
+                        assetsLoaded: false,
+                        updatesCheckSucceeded: false,
+                        hasUpdates: false));
                     return;
                 }
 
                 // Initialize Master Materials context BEFORE loading assets
-                await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath);
+                await viewModel.MasterMaterialsViewModel.SetProjectContextAsync(ProjectFolderPath!);
 
                 bool assetsLoaded = await LoadAssetsFromJsonFileAsync();
 
                 if (assetsLoaded) {
                     if (!TryGetApiKey(out string apiKey)) {
-                        UpdateConnectionButton(ConnectionState.NeedsDownload);
+                        UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
+                            hasSelection: true,
+                            hasProjectPath: true,
+                            assetsLoaded: true,
+                            updatesCheckSucceeded: false,
+                            hasUpdates: false));
                         return;
                     }
 
                     var checkResult = await projectConnectionService.CheckForUpdatesAsync(
-                        ProjectFolderPath,
-                        selectedProjectId,
-                        selectedBranchId,
+                        ProjectFolderPath!,
+                        selectedProjectId!,
+                        selectedBranchId!,
                         apiKey,
                         CancellationToken.None);
 
                     if (!checkResult.Success) {
                         logger.Warn($"SmartLoadAssets: Failed to check for updates: {checkResult.Error}");
-                        UpdateConnectionButton(ConnectionState.NeedsDownload);
+                        UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
+                            hasSelection: true,
+                            hasProjectPath: true,
+                            assetsLoaded: true,
+                            updatesCheckSucceeded: false,
+                            hasUpdates: false));
                         return;
                     }
 
-                    UpdateConnectionButton(checkResult.HasUpdates
-                        ? ConnectionState.NeedsDownload
-                        : ConnectionState.UpToDate);
+                    UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
+                        hasSelection: true,
+                        hasProjectPath: true,
+                        assetsLoaded: true,
+                        updatesCheckSucceeded: true,
+                        hasUpdates: checkResult.HasUpdates));
                 } else {
-                    UpdateConnectionButton(ConnectionState.NeedsDownload);
+                    UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
+                        hasSelection: true,
+                        hasProjectPath: true,
+                        assetsLoaded: false,
+                        updatesCheckSucceeded: false,
+                        hasUpdates: false));
                 }
             } catch (Exception ex) {
                 logger.Error(ex, "Error in SmartLoadAssets");
@@ -553,27 +573,25 @@ namespace AssetProcessor {
 
                 ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(
                     username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
-                if (string.IsNullOrEmpty(projectsResult.UserId)) {
-                    throw new Exception("User ID is null or empty");
+                var loadValidation = connectionWorkflowCoordinator.ValidateProjectsLoad(projectsResult);
+                if (!loadValidation.IsValid) {
+                    throw new Exception(loadValidation.ErrorMessage);
                 }
 
-                UpdateConnectionStatus(true, $"by userID: {projectsResult.UserId}");
+                UpdateConnectionStatus(true, $"by userID: {loadValidation.UserId}");
 
-                if (projectsResult.Projects.Count > 0) {
+                var projectsBinding = connectionWorkflowCoordinator.BuildProjectsBinding(
+                    projectsResult.Projects,
+                    projectsResult.SelectedProjectId);
+                if (projectsBinding.HasProjects) {
                     viewModel.Projects.Clear();
-                    foreach (KeyValuePair<string, string> project in projectsResult.Projects) {
+                    foreach (var project in projectsBinding.Projects) {
                         viewModel.Projects.Add(project);
                     }
 
                     projectSelectionService.SetProjectInitializationInProgress(true);
                     try {
-                        if (!string.IsNullOrEmpty(projectsResult.SelectedProjectId)) {
-                            viewModel.SelectedProjectId = projectsResult.SelectedProjectId;
-                        } else if (viewModel.Projects.Count > 0) {
-                            viewModel.SelectedProjectId = viewModel.Projects[0].Key;
-                        } else {
-                            viewModel.SelectedProjectId = null;
-                        }
+                        viewModel.SelectedProjectId = projectsBinding.SelectedProjectId;
                     } finally {
                         projectSelectionService.SetProjectInitializationInProgress(false);
                     }

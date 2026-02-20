@@ -68,6 +68,10 @@ namespace AssetProcessor {
         private readonly TextureViewerServiceFacade textureViewerServices;
         private readonly ILogService logService;
         private readonly IDataGridLayoutService dataGridLayoutService;
+        private readonly IConnectionWorkflowCoordinator connectionWorkflowCoordinator;
+        private readonly IAssetWorkflowCoordinator assetWorkflowCoordinator;
+        private readonly IPreviewWorkflowCoordinator previewWorkflowCoordinator;
+        private readonly IUploadWorkflowCoordinator uploadWorkflowCoordinator;
 
         // Shortcut properties for backward compatibility with partial files
         private IPlayCanvasService playCanvasService => connectionServices.PlayCanvasService;
@@ -141,12 +145,20 @@ namespace AssetProcessor {
             TextureViewerServiceFacade textureViewerServices,
             ILogService logService,
             IDataGridLayoutService dataGridLayoutService,
+            IConnectionWorkflowCoordinator connectionWorkflowCoordinator,
+            IAssetWorkflowCoordinator assetWorkflowCoordinator,
+            IPreviewWorkflowCoordinator previewWorkflowCoordinator,
+            IUploadWorkflowCoordinator uploadWorkflowCoordinator,
             MainViewModel viewModel) {
             this.connectionServices = connectionServices ?? throw new ArgumentNullException(nameof(connectionServices));
             this.assetDataServices = assetDataServices ?? throw new ArgumentNullException(nameof(assetDataServices));
             this.textureViewerServices = textureViewerServices ?? throw new ArgumentNullException(nameof(textureViewerServices));
             this.logService = logService ?? throw new ArgumentNullException(nameof(logService));
             this.dataGridLayoutService = dataGridLayoutService ?? throw new ArgumentNullException(nameof(dataGridLayoutService));
+            this.connectionWorkflowCoordinator = connectionWorkflowCoordinator ?? throw new ArgumentNullException(nameof(connectionWorkflowCoordinator));
+            this.assetWorkflowCoordinator = assetWorkflowCoordinator ?? throw new ArgumentNullException(nameof(assetWorkflowCoordinator));
+            this.previewWorkflowCoordinator = previewWorkflowCoordinator ?? throw new ArgumentNullException(nameof(previewWorkflowCoordinator));
+            this.uploadWorkflowCoordinator = uploadWorkflowCoordinator ?? throw new ArgumentNullException(nameof(uploadWorkflowCoordinator));
             this.viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             ViewModel = this.viewModel;
 

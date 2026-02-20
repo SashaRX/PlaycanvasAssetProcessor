@@ -38,19 +38,9 @@ namespace AssetProcessor {
         /// </summary>
         private void ApplyTextureGroupingIfEnabled() {
             var view = CollectionViewSource.GetDefaultView(TexturesDataGrid.ItemsSource);
-            if (view == null || !view.CanGroup) return;
+            if (view == null) return;
 
-            if (Settings.AppSettings.Default.GroupTexturesByType) {
-                using (view.DeferRefresh()) {
-                    view.GroupDescriptions.Clear();
-                    view.GroupDescriptions.Add(new PropertyGroupDescription("GroupName"));
-                    view.GroupDescriptions.Add(new PropertyGroupDescription("SubGroupName"));
-                }
-            } else {
-                if (view.GroupDescriptions.Count > 0) {
-                    view.GroupDescriptions.Clear();
-                }
-            }
+            previewWorkflowCoordinator.ApplyTextureGrouping(view, Settings.AppSettings.Default.GroupTexturesByType);
         }
 
         /// <summary>
@@ -122,77 +112,19 @@ namespace AssetProcessor {
             var cancellationToken = textureLoadCancellation.Token;
 
             try {
-                bool ktxLoaded = false;
+                var loadResult = await previewWorkflowCoordinator.LoadOrmPreviewAsync(
+                    ormTexture,
+                    texturePreviewService.IsUsingD3D11Renderer,
+                    TryLoadKtx2ToD3D11Async,
+                    TryLoadKtx2PreviewAsync,
+                    cancellationToken,
+                    message => logger.Info(message));
 
-                if (texturePreviewService.IsUsingD3D11Renderer) {
-                    // D3D11 MODE: Try native KTX2 loading
-                    logger.Info($"[LoadORMPreviewAsync] Loading packed ORM to D3D11: {ormTexture.Name}");
-                    ktxLoaded = await TryLoadKtx2ToD3D11Async(ormTexture, cancellationToken);
-
-                    if (ktxLoaded && !cancellationToken.IsCancellationRequested) {
-                        // Extract mip0 bitmap for histogram calculation (fire-and-forget with timeout)
-                        string? ormPath = ormTexture.Path;
-                        string ormName = ormTexture.Name ?? "unknown";
-                        logger.Info($"[LoadORMPreviewAsync] Starting histogram extraction for: {ormName}, path: {ormPath}");
-
-                        // Small delay to let LoadTexture complete first (prevents concurrent execution issues)
-                        _ = Task.Run(async () => {
-                            try {
-                                // Wait for LoadTexture to complete (queued via BeginInvoke)
-                                await Task.Delay(200, cancellationToken).ConfigureAwait(false);
-
-                                if (string.IsNullOrEmpty(ormPath)) {
-                                    logger.Warn($"[LoadORMPreviewAsync] ORM path is empty for: {ormName}");
-                                    return;
-                                }
-
-                                logger.Info($"[LoadORMPreviewAsync] Extracting mipmaps from: {ormPath}");
-
-                                // Add timeout to prevent hanging
-                                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token);
-
-                                var mipmaps = await texturePreviewService.LoadKtx2MipmapsAsync(ormPath, linkedCts.Token).ConfigureAwait(false);
-                                logger.Info($"[LoadORMPreviewAsync] Extracted {mipmaps.Count} mipmaps for: {ormName}");
-
-                                if (mipmaps.Count > 0 && !linkedCts.Token.IsCancellationRequested) {
-                                    var mip0Bitmap = mipmaps[0].Bitmap;
-                                    logger.Info($"[LoadORMPreviewAsync] Got mip0 bitmap {mip0Bitmap.PixelWidth}x{mip0Bitmap.PixelHeight} for: {ormName}");
-
-                                    // Use BeginInvoke to avoid deadlock
-                                    _ = Dispatcher.BeginInvoke(new Action(() => {
-                                        if (!cancellationToken.IsCancellationRequested) {
-                                            texturePreviewService.OriginalFileBitmapSource = mip0Bitmap;
-                                            UpdateHistogram(mip0Bitmap);
-                                            logger.Info($"[LoadORMPreviewAsync] Histogram updated for ORM: {ormName}");
-                                        } else {
-                                            logger.Info($"[LoadORMPreviewAsync] Cancelled before histogram update: {ormName}");
-                                        }
-                                    }));
-                                } else {
-                                    logger.Warn($"[LoadORMPreviewAsync] No mipmaps or cancelled for: {ormName}");
-                                }
-                            } catch (OperationCanceledException) {
-                                logger.Info($"[LoadORMPreviewAsync] Histogram extraction cancelled/timeout for: {ormName}");
-                            } catch (Exception ex) {
-                                logger.Warn(ex, $"[LoadORMPreviewAsync] Failed to extract bitmap for histogram: {ormName}");
-                            }
-                        });
-                    } else {
-                        logger.Info($"[LoadORMPreviewAsync] Histogram skipped - ktxLoaded={ktxLoaded}, cancelled={cancellationToken.IsCancellationRequested}");
-                    }
-
-                    if (!ktxLoaded) {
-                        // Fallback: Try extracting PNG from KTX2
-                        logger.Info($"[LoadORMPreviewAsync] D3D11 native loading failed, trying PNG extraction: {ormTexture.Name}");
-                        ktxLoaded = await TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
-                    }
-                } else {
-                    // WPF MODE: Extract PNG from KTX2
-                    ktxLoaded = await TryLoadKtx2PreviewAsync(ormTexture, cancellationToken);
+                if (loadResult.ShouldExtractHistogram) {
+                    StartOrmHistogramExtraction(ormTexture, cancellationToken);
                 }
 
-                if (!ktxLoaded && !cancellationToken.IsCancellationRequested) {
+                if (!loadResult.Loaded && !loadResult.WasCancelled) {
                     await Dispatcher.InvokeAsync(() => {
                         texturePreviewService.IsKtxPreviewAvailable = false;
                         viewModel.TextureInfoFormat = "Format: KTX2 (preview unavailable)";
@@ -206,6 +138,31 @@ namespace AssetProcessor {
                 ResetPreviewState();
                 ClearD3D11Viewer();
             }
+        }
+
+        private void StartOrmHistogramExtraction(ORMTextureResource ormTexture, CancellationToken cancellationToken) {
+            string? ormPath = ormTexture.Path;
+            string ormName = ormTexture.Name ?? "unknown";
+            logger.Info($"[LoadORMPreviewAsync] Starting histogram extraction for: {ormName}, path: {ormPath}");
+
+            _ = previewWorkflowCoordinator.ExtractOrmHistogramAsync(
+                ormPath,
+                ormName,
+                texturePreviewService.LoadKtx2MipmapsAsync,
+                mip0Bitmap => {
+                    _ = Dispatcher.BeginInvoke(new Action(() => {
+                        if (!cancellationToken.IsCancellationRequested) {
+                            texturePreviewService.OriginalFileBitmapSource = mip0Bitmap;
+                            UpdateHistogram(mip0Bitmap);
+                            logger.Info($"[LoadORMPreviewAsync] Histogram updated for ORM: {ormName}");
+                        } else {
+                            logger.Info($"[LoadORMPreviewAsync] Cancelled before histogram update: {ormName}");
+                        }
+                    }));
+                },
+                cancellationToken,
+                message => logger.Info(message),
+                message => logger.Warn(message));
         }
 
         #endregion

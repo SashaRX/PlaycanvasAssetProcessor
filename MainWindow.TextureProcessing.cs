@@ -82,7 +82,7 @@ namespace AssetProcessor {
                     texturePreviewService.CurrentKtxMipmaps?.Clear();
                     texturePreviewService.CurrentMipLevel = 0;
 
-                    if (!texturePreviewService.IsUserPreviewSelection || texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                    if (previewWorkflowCoordinator.ShouldAutoActivateKtxPreview(texturePreviewService.IsUserPreviewSelection, texturePreviewService.CurrentPreviewSourceMode)) {
                         SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
                     } else {
                         UpdatePreviewSourceControls();
@@ -216,17 +216,7 @@ namespace AssetProcessor {
                 texturesToUpload = viewModel.Textures.Where(t => t.ExportToServer);
             }
 
-            // Вычисляем путь к KTX2 из исходного Path (заменяем расширение на .ktx2)
-            var selectedTextures = texturesToUpload
-                .Where(t => !string.IsNullOrEmpty(t.Path))
-                .Select(t => {
-                    var sourceDir = System.IO.Path.GetDirectoryName(t.Path)!;
-                    var fileName = System.IO.Path.GetFileNameWithoutExtension(t.Path);
-                    var ktx2Path = System.IO.Path.Combine(sourceDir, fileName + ".ktx2");
-                    return (Texture: t, Ktx2Path: ktx2Path);
-                })
-                .Where(x => System.IO.File.Exists(x.Ktx2Path))
-                .ToList();
+            var selectedTextures = uploadWorkflowCoordinator.CollectConvertedTextures(texturesToUpload);
 
             if (!selectedTextures.Any()) {
                 MessageBox.Show(

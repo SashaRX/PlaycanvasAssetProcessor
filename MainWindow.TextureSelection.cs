@@ -93,63 +93,19 @@ namespace AssetProcessor {
                 return;
             }
 
-            // Load the packed KTX2 file for preview and histogram
-            bool ktxLoaded = false;
+            var ormPreviewResult = await previewWorkflowCoordinator.LoadOrmPreviewAsync(
+                ormTexture,
+                texturePreviewService.IsUsingD3D11Renderer,
+                TryLoadKtx2ToD3D11Async,
+                TryLoadKtx2PreviewAsync,
+                ct,
+                logService.LogInfo);
 
-            if (texturePreviewService.IsUsingD3D11Renderer) {
-                // D3D11 MODE: Try native KTX2 loading
-                logService.LogInfo($"[LoadORMTexturePreview] Loading packed ORM to D3D11: {ormTexture.Name}");
-                ktxLoaded = await TryLoadKtx2ToD3D11Async(ormTexture, ct);
-
-                if (!ktxLoaded) {
-                    // Fallback: Try extracting PNG from KTX2
-                    logService.LogInfo($"[LoadORMTexturePreview] D3D11 native loading failed, trying PNG extraction");
-                    ktxLoaded = await TryLoadKtx2PreviewAsync(ormTexture, ct);
-                }
-            } else {
-                // WPF MODE: Extract PNG from KTX2
-                ktxLoaded = await TryLoadKtx2PreviewAsync(ormTexture, ct);
+            if (ormPreviewResult.ShouldExtractHistogram) {
+                StartOrmHistogramExtraction(ormTexture, ct);
             }
 
-            // Extract histogram for packed ORM textures
-            if (ktxLoaded && !ct.IsCancellationRequested) {
-                string? ormPath = ormTexture.Path;
-                string ormName = ormTexture.Name ?? "unknown";
-                logger.Info($"[ORM Histogram] Starting extraction for: {ormName}, path: {ormPath}");
-
-                _ = Task.Run(async () => {
-                    try {
-                        if (string.IsNullOrEmpty(ormPath)) {
-                            logger.Warn($"[ORM Histogram] Path is empty for: {ormName}");
-                            return;
-                        }
-
-                        using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-                        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(ct, timeoutCts.Token);
-
-                        var mipmaps = await texturePreviewService.LoadKtx2MipmapsAsync(ormPath, linkedCts.Token).ConfigureAwait(false);
-                        logger.Info($"[ORM Histogram] Extracted {mipmaps.Count} mipmaps for: {ormName}");
-
-                        if (mipmaps.Count > 0 && !linkedCts.Token.IsCancellationRequested) {
-                            var mip0Bitmap = mipmaps[0].Bitmap;
-                            logger.Info($"[ORM Histogram] Got mip0 bitmap {mip0Bitmap.PixelWidth}x{mip0Bitmap.PixelHeight}");
-                            _ = Dispatcher.BeginInvoke(new Action(() => {
-                                if (!ct.IsCancellationRequested) {
-                                    texturePreviewService.OriginalFileBitmapSource = mip0Bitmap;
-                                    UpdateHistogram(mip0Bitmap);
-                                    logger.Info($"[ORM Histogram] Histogram updated for: {ormName}");
-                                }
-                            }));
-                        }
-                    } catch (OperationCanceledException) {
-                        logger.Info($"[ORM Histogram] Extraction cancelled/timeout for: {ormName}");
-                    } catch (Exception ex) {
-                        logger.Warn(ex, $"[ORM Histogram] Failed to extract for: {ormName}");
-                    }
-                });
-            }
-
-            if (!ktxLoaded) {
+            if (!ormPreviewResult.Loaded) {
                 _ = Dispatcher.BeginInvoke(new Action(() => {
                     if (ct.IsCancellationRequested) return;
                     texturePreviewService.IsKtxPreviewAvailable = false;
@@ -192,32 +148,16 @@ namespace AssetProcessor {
 
             ct.ThrowIfCancellationRequested();
 
-            bool ktxLoaded = false;
+            var texturePreviewResult = await previewWorkflowCoordinator.LoadTexturePreviewAsync(
+                texturePreviewService.CurrentPreviewSourceMode,
+                texturePreviewService.IsUsingD3D11Renderer,
+                cancellationToken => TryLoadKtx2ToD3D11Async(texture, cancellationToken),
+                cancellationToken => TryLoadKtx2PreviewAsync(texture, cancellationToken),
+                (loadToViewer, cancellationToken) => LoadSourcePreviewAsync(texture, cancellationToken, loadToViewer),
+                ct,
+                logService.LogInfo);
 
-            if (texturePreviewService.IsUsingD3D11Renderer) {
-                // D3D11 MODE: Try D3D11 native KTX2 loading
-                logService.LogInfo($"[LoadTexturePreview] Attempting KTX2 load for: {texture.Name}");
-                ktxLoaded = await TryLoadKtx2ToD3D11Async(texture, ct);
-                logService.LogInfo($"[LoadTexturePreview] KTX2 load result: {ktxLoaded}");
-
-                if (ktxLoaded) {
-                    // KTX2 loaded successfully, still load source for histogram
-                    bool showInViewer = (texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Source);
-                    logService.LogInfo($"[LoadTexturePreview] Loading source for histogram, showInViewer: {showInViewer}");
-                    await LoadSourcePreviewAsync(texture, ct, loadToViewer: showInViewer);
-                } else {
-                    // No KTX2 or failed, fallback to source preview
-                    logService.LogInfo($"[LoadTexturePreview] No KTX2, loading source preview");
-                    await LoadSourcePreviewAsync(texture, ct, loadToViewer: true);
-                }
-            } else {
-                // WPF MODE: Use PNG extraction for mipmaps
-                Task<bool> ktxPreviewTask = TryLoadKtx2PreviewAsync(texture, ct);
-                await LoadSourcePreviewAsync(texture, ct, loadToViewer: true);
-                ktxLoaded = await ktxPreviewTask;
-            }
-
-            if (!ktxLoaded) {
+            if (!texturePreviewResult.KtxLoaded) {
                 _ = Dispatcher.BeginInvoke(new Action(() => {
                     if (ct.IsCancellationRequested) return;
 
@@ -276,7 +216,7 @@ namespace AssetProcessor {
                     texturePreviewService.CurrentMipLevel = 0;
 
                     // Update UI to show KTX2 is active
-                    if (!texturePreviewService.IsUserPreviewSelection || texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                    if (previewWorkflowCoordinator.ShouldAutoActivateKtxPreview(texturePreviewService.IsUserPreviewSelection, texturePreviewService.CurrentPreviewSourceMode)) {
                         SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
                     } else {
                         UpdatePreviewSourceControls();
@@ -328,7 +268,7 @@ namespace AssetProcessor {
                     texturePreviewService.CurrentMipLevel = 0;
                     texturePreviewService.IsKtxPreviewAvailable = true;
 
-                    if (!texturePreviewService.IsUserPreviewSelection || texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                    if (previewWorkflowCoordinator.ShouldAutoActivateKtxPreview(texturePreviewService.IsUserPreviewSelection, texturePreviewService.CurrentPreviewSourceMode)) {
                         SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
                     } else {
                         UpdatePreviewSourceControls();

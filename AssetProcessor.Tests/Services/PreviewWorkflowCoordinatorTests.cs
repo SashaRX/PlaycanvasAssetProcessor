@@ -1,5 +1,6 @@
 using AssetProcessor.Resources;
 using AssetProcessor.Services;
+using AssetProcessor.Services.Models;
 using System.Collections.ObjectModel;
 using System.Windows.Data;
 using System.Windows.Media;

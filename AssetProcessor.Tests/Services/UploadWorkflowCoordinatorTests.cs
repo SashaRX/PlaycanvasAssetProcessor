@@ -66,6 +66,27 @@ public class UploadWorkflowCoordinatorTests {
         }
     }
 
+
+    [Fact]
+    public void BuildUploadResultMessage_IncludesTrimmedErrors() {
+        var sut = new UploadWorkflowCoordinator();
+        var result = new B2BatchUploadResult {
+            SuccessCount = 2,
+            SkippedCount = 1,
+            FailedCount = 3,
+            Duration = TimeSpan.FromSeconds(12.3),
+            Errors = new List<string> { "e1", "e2", "e3" }
+        };
+
+        var message = sut.BuildUploadResultMessage(result, mappingUploaded: 1, maxErrorsToShow: 2);
+
+        Assert.Contains("Uploaded: 3", message);
+        Assert.Contains("mapping.json: uploaded", message);
+        Assert.Contains("• e1", message);
+        Assert.Contains("• e2", message);
+        Assert.Contains("...and 1 more", message);
+    }
+
     [Fact]
     public void ApplyUploadStatuses_UpdatesMatchingResources() {
         var sut = new UploadWorkflowCoordinator();

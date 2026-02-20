@@ -25,6 +25,8 @@ public interface IUploadWorkflowCoordinator {
         Action<string>? onInfo = null,
         Action<Exception, string>? onWarn = null);
 
+    string BuildUploadResultMessage(B2BatchUploadResult result, int mappingUploaded, int maxErrorsToShow = 5);
+
     Task<UploadStatusUpdates> SaveUploadRecordsAsync(
         B2BatchUploadResult uploadResult,
         string serverPath,

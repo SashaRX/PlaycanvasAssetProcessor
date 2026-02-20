@@ -108,6 +108,23 @@ public sealed class UploadWorkflowCoordinator : IUploadWorkflowCoordinator {
         }
     }
 
+
+    public string BuildUploadResultMessage(B2BatchUploadResult result, int mappingUploaded, int maxErrorsToShow = 5) {
+        var errorDetails = result.Errors.Count > 0
+            ? "\n\nErrors:\n" + string.Join("\n", result.Errors.Take(maxErrorsToShow).Select(e => $"  • {e}"))
+              + (result.Errors.Count > maxErrorsToShow ? $"\n  ...and {result.Errors.Count - maxErrorsToShow} more (see log)" : "")
+            : string.Empty;
+
+        return
+            "Upload completed!\n\n" +
+            $"Uploaded: {result.SuccessCount + mappingUploaded}\n" +
+            $"Skipped (already exists): {result.SkippedCount}\n" +
+            $"Failed: {result.FailedCount}\n" +
+            (mappingUploaded > 0 ? "mapping.json: uploaded\n" : "") +
+            $"Duration: {result.Duration.TotalSeconds:F1}s" +
+            errorDetails;
+    }
+
     public async Task<UploadStatusUpdates> SaveUploadRecordsAsync(
         B2BatchUploadResult uploadResult,
         string serverPath,

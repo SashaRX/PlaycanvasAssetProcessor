@@ -281,7 +281,7 @@ public static class Ktx2TextureLoader {
             try {
                 return LoadFromHandle(textureHandle, ""); // No filePath for memory loading
             } finally {
-                LibKtxNative.ktxTexture2_Destroy(textureHandle);
+                LibKtxNative.ktxTexture_Destroy(textureHandle);
             }
         } finally {
             Marshal.FreeHGlobal(dataPtr);

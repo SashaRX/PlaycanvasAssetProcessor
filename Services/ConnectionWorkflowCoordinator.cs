@@ -3,6 +3,7 @@ using AssetProcessor.Services.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 
 namespace AssetProcessor.Services;
@@ -53,6 +54,16 @@ public sealed class ConnectionWorkflowCoordinator : IConnectionWorkflowCoordinat
         return new ConnectionProjectSelectionResult {
             HasProjects = true,
             SelectedProjectId = projects.First().Key
+        };
+    }
+
+
+    public ConnectionProjectsBindingResult BuildProjectsBinding(IReadOnlyCollection<KeyValuePair<string, string>> projects, string? preferredProjectId) {
+        var selected = SelectProject(projects, preferredProjectId);
+        return new ConnectionProjectsBindingResult {
+            HasProjects = selected.HasProjects,
+            SelectedProjectId = selected.SelectedProjectId,
+            Projects = projects.ToList().AsReadOnly()
         };
     }
 

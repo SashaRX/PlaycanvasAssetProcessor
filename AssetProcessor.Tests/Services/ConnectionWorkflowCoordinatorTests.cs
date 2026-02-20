@@ -151,3 +151,29 @@ public class ConnectionWorkflowCoordinatorTests {
         Assert.Equal("p1", result.SelectedProjectId);
     }
 }
+
+    [Fact]
+    public void BuildProjectsBinding_ReturnsProjectsAndSelection() {
+        var sut = new ConnectionWorkflowCoordinator();
+        var projects = new List<KeyValuePair<string, string>> {
+            new("p1", "Project 1"),
+            new("p2", "Project 2")
+        };
+
+        var result = sut.BuildProjectsBinding(projects, "p2");
+
+        Assert.True(result.HasProjects);
+        Assert.Equal("p2", result.SelectedProjectId);
+        Assert.Equal(2, result.Projects.Count);
+    }
+
+    [Fact]
+    public void BuildProjectsBinding_ReturnsEmpty_WhenProjectsMissing() {
+        var sut = new ConnectionWorkflowCoordinator();
+
+        var result = sut.BuildProjectsBinding([], "p2");
+
+        Assert.False(result.HasProjects);
+        Assert.Null(result.SelectedProjectId);
+        Assert.Empty(result.Projects);
+    }

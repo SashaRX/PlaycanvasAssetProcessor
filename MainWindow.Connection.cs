@@ -207,21 +207,21 @@ namespace AssetProcessor {
 
                 await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {projectsResult.UserId}"));
 
-                var projectSelection = connectionWorkflowCoordinator.SelectProject(
+                var projectsBinding = connectionWorkflowCoordinator.BuildProjectsBinding(
                     projectsResult.Projects,
                     projectsResult.SelectedProjectId);
-                if (!projectSelection.HasProjects) {
+                if (!projectsBinding.HasProjects) {
                     throw new Exception("Project list is empty");
                 }
 
                 viewModel.Projects.Clear();
-                foreach (KeyValuePair<string, string> project in projectsResult.Projects) {
+                foreach (var project in projectsBinding.Projects) {
                     viewModel.Projects.Add(project);
                 }
 
                 projectSelectionService.SetProjectInitializationInProgress(true);
                 try {
-                    viewModel.SelectedProjectId = projectSelection.SelectedProjectId;
+                    viewModel.SelectedProjectId = projectsBinding.SelectedProjectId;
                 } finally {
                     projectSelectionService.SetProjectInitializationInProgress(false);
                 }
@@ -578,18 +578,18 @@ namespace AssetProcessor {
 
                 UpdateConnectionStatus(true, $"by userID: {projectsResult.UserId}");
 
-                var projectSelection = connectionWorkflowCoordinator.SelectProject(
+                var projectsBinding = connectionWorkflowCoordinator.BuildProjectsBinding(
                     projectsResult.Projects,
                     projectsResult.SelectedProjectId);
-                if (projectSelection.HasProjects) {
+                if (projectsBinding.HasProjects) {
                     viewModel.Projects.Clear();
-                    foreach (KeyValuePair<string, string> project in projectsResult.Projects) {
+                    foreach (var project in projectsBinding.Projects) {
                         viewModel.Projects.Add(project);
                     }
 
                     projectSelectionService.SetProjectInitializationInProgress(true);
                     try {
-                        viewModel.SelectedProjectId = projectSelection.SelectedProjectId;
+                        viewModel.SelectedProjectId = projectsBinding.SelectedProjectId;
                     } finally {
                         projectSelectionService.SetProjectInitializationInProgress(false);
                     }

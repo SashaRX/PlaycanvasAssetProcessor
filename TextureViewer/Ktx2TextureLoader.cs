@@ -74,7 +74,7 @@ public static class Ktx2TextureLoader {
                     return textureData;
                 } finally {
                     DiagLog("[KTX2LOADER] Destroying texture handle...");
-                    LibKtxNative.ktxTexture2_Destroy(textureHandle);
+                    LibKtxNative.ktxTexture_Destroy(textureHandle);
                 }
             } finally {
                 DiagLog("[KTX2LOADER] Freeing unmanaged memory...");

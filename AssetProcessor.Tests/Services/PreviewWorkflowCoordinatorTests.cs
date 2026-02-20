@@ -63,7 +63,7 @@ public class PreviewWorkflowCoordinatorTests {
         var sourceCalls = 0;
 
         var result = await sut.LoadTexturePreviewAsync(
-            TexturePreviewSourceMode.Source,
+            AssetProcessor.Services.Models.TexturePreviewSourceMode.Source,
             isUsingD3D11Renderer: true,
             tryLoadKtx2ToD3D11Async: _ => Task.FromResult(true),
             tryLoadKtx2PreviewAsync: _ => Task.FromResult(false),
@@ -87,7 +87,7 @@ public class PreviewWorkflowCoordinatorTests {
         var sourceCalls = 0;
 
         var result = await sut.LoadTexturePreviewAsync(
-            TexturePreviewSourceMode.Ktx2,
+            AssetProcessor.Services.Models.TexturePreviewSourceMode.Ktx2,
             isUsingD3D11Renderer: false,
             tryLoadKtx2ToD3D11Async: _ => Task.FromResult(false),
             tryLoadKtx2PreviewAsync: _ => {

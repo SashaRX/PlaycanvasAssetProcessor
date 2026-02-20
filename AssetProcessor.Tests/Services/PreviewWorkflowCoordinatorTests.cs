@@ -57,6 +57,29 @@ public class PreviewWorkflowCoordinatorTests {
 
 
 
+
+    [Fact]
+    public void ShouldAutoActivateKtxPreview_ReturnsTrue_WhenAutoSelection() {
+        var sut = new PreviewWorkflowCoordinator();
+
+        var result = sut.ShouldAutoActivateKtxPreview(
+            isUserPreviewSelection: false,
+            currentPreviewSourceMode: AssetProcessor.Services.Models.TexturePreviewSourceMode.Source);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void ShouldAutoActivateKtxPreview_ReturnsFalse_WhenUserSelectedSource() {
+        var sut = new PreviewWorkflowCoordinator();
+
+        var result = sut.ShouldAutoActivateKtxPreview(
+            isUserPreviewSelection: true,
+            currentPreviewSourceMode: AssetProcessor.Services.Models.TexturePreviewSourceMode.Source);
+
+        Assert.False(result);
+    }
+
     [Fact]
     public async Task LoadTexturePreviewAsync_D3D11Mode_LoadsSourceAndKeepsKtxFlag() {
         var sut = new PreviewWorkflowCoordinator();

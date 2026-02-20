@@ -216,7 +216,7 @@ namespace AssetProcessor {
                     texturePreviewService.CurrentMipLevel = 0;
 
                     // Update UI to show KTX2 is active
-                    if (!texturePreviewService.IsUserPreviewSelection || texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                    if (previewWorkflowCoordinator.ShouldAutoActivateKtxPreview(texturePreviewService.IsUserPreviewSelection, texturePreviewService.CurrentPreviewSourceMode)) {
                         SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
                     } else {
                         UpdatePreviewSourceControls();
@@ -268,7 +268,7 @@ namespace AssetProcessor {
                     texturePreviewService.CurrentMipLevel = 0;
                     texturePreviewService.IsKtxPreviewAvailable = true;
 
-                    if (!texturePreviewService.IsUserPreviewSelection || texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                    if (previewWorkflowCoordinator.ShouldAutoActivateKtxPreview(texturePreviewService.IsUserPreviewSelection, texturePreviewService.CurrentPreviewSourceMode)) {
                         SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
                     } else {
                         UpdatePreviewSourceControls();

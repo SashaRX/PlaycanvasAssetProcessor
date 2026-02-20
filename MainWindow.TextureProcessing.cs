@@ -82,7 +82,7 @@ namespace AssetProcessor {
                     texturePreviewService.CurrentKtxMipmaps?.Clear();
                     texturePreviewService.CurrentMipLevel = 0;
 
-                    if (!texturePreviewService.IsUserPreviewSelection || texturePreviewService.CurrentPreviewSourceMode == TexturePreviewSourceMode.Ktx2) {
+                    if (previewWorkflowCoordinator.ShouldAutoActivateKtxPreview(texturePreviewService.IsUserPreviewSelection, texturePreviewService.CurrentPreviewSourceMode)) {
                         SetPreviewSourceMode(TexturePreviewSourceMode.Ktx2, initiatedByUser: false);
                     } else {
                         UpdatePreviewSourceControls();

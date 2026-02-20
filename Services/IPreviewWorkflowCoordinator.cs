@@ -12,6 +12,7 @@ namespace AssetProcessor.Services;
 
 public interface IPreviewWorkflowCoordinator {
     void ApplyTextureGrouping(ICollectionView view, bool groupByType);
+    bool ShouldAutoActivateKtxPreview(bool isUserPreviewSelection, TexturePreviewSourceMode currentPreviewSourceMode);
 
     Task<PreviewOrmLoadResult> LoadOrmPreviewAsync(
         ORMTextureResource ormTexture,

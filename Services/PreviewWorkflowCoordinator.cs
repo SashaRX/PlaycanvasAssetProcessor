@@ -29,6 +29,11 @@ public sealed class PreviewWorkflowCoordinator : IPreviewWorkflowCoordinator {
         }
     }
 
+
+    public bool ShouldAutoActivateKtxPreview(bool isUserPreviewSelection, TexturePreviewSourceMode currentPreviewSourceMode) {
+        return !isUserPreviewSelection || currentPreviewSourceMode == TexturePreviewSourceMode.Ktx2;
+    }
+
     public async Task<PreviewOrmLoadResult> LoadOrmPreviewAsync(
         ORMTextureResource ormTexture,
         bool isUsingD3D11Renderer,

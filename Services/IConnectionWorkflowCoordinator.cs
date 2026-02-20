@@ -13,4 +13,5 @@ public interface IConnectionWorkflowCoordinator {
     ConnectionState EvaluateSmartLoadState(bool hasSelection, bool hasProjectPath, bool assetsLoaded, bool updatesCheckSucceeded, bool hasUpdates);
     ConnectionProjectSelectionResult SelectProject(IReadOnlyCollection<KeyValuePair<string, string>> projects, string? preferredProjectId);
     ConnectionProjectsBindingResult BuildProjectsBinding(IReadOnlyCollection<KeyValuePair<string, string>> projects, string? preferredProjectId);
+    ConnectionProjectsLoadResult ValidateProjectsLoad(ProjectSelectionResult projectsResult);
 }

@@ -1,5 +1,6 @@
 using AssetProcessor.Infrastructure.Enums;
 using AssetProcessor.Services;
+using AssetProcessor.Services.Models;
 using System.Collections.Generic;
 using Xunit;
 
@@ -176,4 +177,27 @@ public class ConnectionWorkflowCoordinatorTests {
         Assert.False(result.HasProjects);
         Assert.Null(result.SelectedProjectId);
         Assert.Empty(result.Projects);
+    }
+
+    [Fact]
+    public void ValidateProjectsLoad_ReturnsInvalid_WhenUserIdMissing() {
+        var sut = new ConnectionWorkflowCoordinator();
+        var projectsResult = new ProjectSelectionResult(new Dictionary<string, string>(), null, string.Empty, "user");
+
+        var result = sut.ValidateProjectsLoad(projectsResult);
+
+        Assert.False(result.IsValid);
+        Assert.Equal("User ID is null or empty", result.ErrorMessage);
+    }
+
+    [Fact]
+    public void ValidateProjectsLoad_ReturnsHasProjectsFalse_WhenProjectsEmpty() {
+        var sut = new ConnectionWorkflowCoordinator();
+        var projectsResult = new ProjectSelectionResult(new Dictionary<string, string>(), null, "u1", "user");
+
+        var result = sut.ValidateProjectsLoad(projectsResult);
+
+        Assert.True(result.IsValid);
+        Assert.False(result.HasProjects);
+        Assert.Equal("u1", result.UserId);
     }

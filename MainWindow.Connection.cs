@@ -201,11 +201,12 @@ namespace AssetProcessor {
                 }
 
                 ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
-                if (string.IsNullOrEmpty(projectsResult.UserId)) {
-                    throw new Exception("User ID is null or empty");
+                var loadValidation = connectionWorkflowCoordinator.ValidateProjectsLoad(projectsResult);
+                if (!loadValidation.IsValid) {
+                    throw new Exception(loadValidation.ErrorMessage);
                 }
 
-                await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {projectsResult.UserId}"));
+                await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {loadValidation.UserId}"));
 
                 var projectsBinding = connectionWorkflowCoordinator.BuildProjectsBinding(
                     projectsResult.Projects,
@@ -572,11 +573,12 @@ namespace AssetProcessor {
 
                 ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(
                     username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
-                if (string.IsNullOrEmpty(projectsResult.UserId)) {
-                    throw new Exception("User ID is null or empty");
+                var loadValidation = connectionWorkflowCoordinator.ValidateProjectsLoad(projectsResult);
+                if (!loadValidation.IsValid) {
+                    throw new Exception(loadValidation.ErrorMessage);
                 }
 
-                UpdateConnectionStatus(true, $"by userID: {projectsResult.UserId}");
+                UpdateConnectionStatus(true, $"by userID: {loadValidation.UserId}");
 
                 var projectsBinding = connectionWorkflowCoordinator.BuildProjectsBinding(
                     projectsResult.Projects,

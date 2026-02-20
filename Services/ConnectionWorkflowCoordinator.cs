@@ -67,6 +67,31 @@ public sealed class ConnectionWorkflowCoordinator : IConnectionWorkflowCoordinat
         };
     }
 
+
+    public ConnectionProjectsLoadResult ValidateProjectsLoad(ProjectSelectionResult projectsResult) {
+        if (string.IsNullOrWhiteSpace(projectsResult.UserId)) {
+            return new ConnectionProjectsLoadResult {
+                IsValid = false,
+                HasProjects = false,
+                ErrorMessage = "User ID is null or empty"
+            };
+        }
+
+        if (projectsResult.Projects.Count == 0) {
+            return new ConnectionProjectsLoadResult {
+                IsValid = true,
+                HasProjects = false,
+                UserId = projectsResult.UserId
+            };
+        }
+
+        return new ConnectionProjectsLoadResult {
+            IsValid = true,
+            HasProjects = true,
+            UserId = projectsResult.UserId
+        };
+    }
+
     private static ConnectionWorkflowResult BuildResult(bool hasUpdates, bool hasMissingFiles) {
         return new ConnectionWorkflowResult {
             HasUpdates = hasUpdates,

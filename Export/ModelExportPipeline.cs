@@ -138,6 +138,11 @@ public class ModelExportPipeline {
                 Logger.Info($"ORM packed {packedTextureIds.Count} textures into {ormResults.Count} ORM files");
             }
 
+            // 5.5. Удаляем индивидуальные KTX файлы для текстур, упакованных в ORM
+            if (packedTextureIds.Count > 0) {
+                DeletePackedComponentKtxFiles(packedTextureIds, modelTextures, texturesDir);
+            }
+
             // 6. Конвертируем обычные текстуры в KTX2 (пропускаем те, что уже в ORM)
             var texturePathMap = new Dictionary<int, string>(); // TextureId -> relative path
             if (options.ConvertTextures) {
@@ -567,6 +572,34 @@ public class ModelExportPipeline {
         if (hasAO && hasGloss) return ChannelPackingMode.OG;
 
         return ChannelPackingMode.None;
+    }
+
+    /// <summary>
+    /// Удаляет индивидуальные KTX2/KTX файлы для текстур, упакованных в ORM.
+    /// Вызывается после успешного ORM-пакинга, чтобы убрать устаревшие файлы компонентов.
+    /// </summary>
+    private void DeletePackedComponentKtxFiles(
+        HashSet<int> packedTextureIds,
+        List<TextureResource> textures,
+        string texturesDir) {
+
+        if (packedTextureIds.Count == 0 || !Directory.Exists(texturesDir)) return;
+
+        foreach (var texture in textures.Where(t => packedTextureIds.Contains(t.ID))) {
+            var baseName = GetSafeFileName(texture.Name ?? $"tex_{texture.ID}");
+
+            foreach (var ext in new[] { ".ktx2", ".ktx" }) {
+                var filePath = Path.Combine(texturesDir, baseName + ext);
+                if (File.Exists(filePath)) {
+                    try {
+                        File.Delete(filePath);
+                        Logger.Info($"Deleted individual KTX file for ORM component '{texture.Name}': {filePath}");
+                    } catch (Exception ex) {
+                        Logger.Warn($"Failed to delete ORM component KTX file {filePath}: {ex.Message}");
+                    }
+                }
+            }
+        }
     }
 
     private async Task<Dictionary<int, string>> ConvertTexturesToKTX2Async(
@@ -1390,6 +1423,11 @@ public class ModelExportPipeline {
                     (ormResults, packedTextureIds) = await GenerateORMTexturesAsync(
                         new List<MaterialResource> { material }, materialTextures, texturesDir, options, cancellationToken);
                     result.GeneratedORMTextures.AddRange(ormResults.Values.Select(r => r.OutputPath));
+                }
+
+                // Удаляем индивидуальные KTX файлы для текстур, упакованных в ORM
+                if (packedTextureIds.Count > 0) {
+                    DeletePackedComponentKtxFiles(packedTextureIds, materialTextures, texturesDir);
                 }
 
                 // Конвертируем текстуры в KTX2

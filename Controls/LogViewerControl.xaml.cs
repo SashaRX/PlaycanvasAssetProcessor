@@ -44,7 +44,9 @@ namespace AssetProcessor.Controls {
             Timestamp = logEvent.TimeStamp.ToString("HH:mm:ss.fff");
             Level = logEvent.Level.Name.ToUpper();
             Logger = logEvent.LoggerName?.Split('.').LastOrDefault() ?? "";
-            Message = logEvent.FormattedMessage ?? "";
+            Message = logEvent.Exception != null
+                ? $"{logEvent.FormattedMessage ?? ""}\n{logEvent.Exception}"
+                : logEvent.FormattedMessage ?? "";
             LogLevel = logEvent.Level;
 
             // Color coding based on level (theme-aware)

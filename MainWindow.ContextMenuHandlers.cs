@@ -312,23 +312,33 @@ namespace AssetProcessor {
         #region File Location Helpers
 
         /// <summary>
-        /// Finds the processed KTX2 file path for a texture
+        /// Finds the processed KTX2 file path for a texture.
+        /// Checks: 1) same dir as source (standalone conversion), 2) server/assets/content (model export).
         /// </summary>
         private string? FindProcessedTexturePath(TextureResource texture) {
+            var textureName = Path.GetFileNameWithoutExtension(texture.Path ?? texture.Name);
+            if (string.IsNullOrEmpty(textureName)) return null;
+
+            // 1. Same directory as source file (standalone converter saves next to source)
+            if (!string.IsNullOrEmpty(texture.Path)) {
+                var sourceDir = Path.GetDirectoryName(texture.Path);
+                if (!string.IsNullOrEmpty(sourceDir)) {
+                    foreach (var ext in new[] { ".ktx2", ".ktx" }) {
+                        var candidate = Path.Combine(sourceDir, textureName + ext);
+                        if (File.Exists(candidate)) return candidate;
+                    }
+                }
+            }
+
+            // 2. server/assets/content (model export pipeline output)
             if (string.IsNullOrEmpty(ProjectFolderPath)) return null;
 
             var serverContentPath = Path.Combine(ProjectFolderPath, "server", "assets", "content");
             if (!Directory.Exists(serverContentPath)) return null;
 
-            // Try to find KTX2 file by texture name
-            var textureName = Path.GetFileNameWithoutExtension(texture.Path ?? texture.Name);
-            if (string.IsNullOrEmpty(textureName)) return null;
-
-            // Search for matching KTX2 file
             var ktx2Files = Directory.GetFiles(serverContentPath, $"{textureName}.ktx2", SearchOption.AllDirectories);
             if (ktx2Files.Length > 0) return ktx2Files[0];
 
-            // Also try with _lod0 suffix (for some textures)
             ktx2Files = Directory.GetFiles(serverContentPath, $"{textureName}_*.ktx2", SearchOption.AllDirectories);
             if (ktx2Files.Length > 0) return ktx2Files[0];
 

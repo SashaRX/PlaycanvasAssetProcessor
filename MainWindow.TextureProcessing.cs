@@ -176,7 +176,7 @@ namespace AssetProcessor {
                     resultMessage += $"\n... and {result.ErrorMessages.Count - 10} more errors (see log file for details)";
                 }
             } else if (result.SuccessCount > 0) {
-                resultMessage += "\n\nConverted files saved next to source images.";
+                resultMessage += "\n\nConverted files saved to server/assets/content/.";
             }
 
             return resultMessage;
@@ -216,16 +216,20 @@ namespace AssetProcessor {
                 texturesToUpload = viewModel.Textures.Where(t => t.ExportToServer);
             }
 
-            // Вычисляем путь к KTX2 из исходного Path (заменяем расширение на .ktx2)
+            // Ищем KTX2 через KtxPathResolver: сначала рядом с исходником,
+            // затем в server/assets/content/ (основная структура после конвертации)
+            var projectFolder = System.IO.Path.Combine(Settings.AppSettings.Default.ProjectsFolderPath, projectName);
             var selectedTextures = texturesToUpload
                 .Where(t => !string.IsNullOrEmpty(t.Path))
                 .Select(t => {
-                    var sourceDir = System.IO.Path.GetDirectoryName(t.Path)!;
-                    var fileName = System.IO.Path.GetFileNameWithoutExtension(t.Path);
-                    var ktx2Path = System.IO.Path.Combine(sourceDir, fileName + ".ktx2");
+                    var ktx2Path = Services.KtxPathResolver.FindExistingKtxPath(
+                        t.Path,
+                        projectFolder,
+                        () => TextureConversion.Settings.TextureConversionSettingsManager.LoadSettings(),
+                        null);
                     return (Texture: t, Ktx2Path: ktx2Path);
                 })
-                .Where(x => System.IO.File.Exists(x.Ktx2Path))
+                .Where(x => x.Ktx2Path != null)
                 .ToList();
 
             if (!selectedTextures.Any()) {
@@ -257,7 +261,14 @@ namespace AssetProcessor {
 
                 // Подготавливаем список файлов для загрузки
                 var files = selectedTextures
-                    .Select(x => (LocalPath: x.Ktx2Path, RemotePath: $"{projectName}/textures/{System.IO.Path.GetFileName(x.Ktx2Path)}"))
+                    .Select(x => {
+                        var normalizedPath = x.Ktx2Path!.Replace('\\', '/');
+                        var serverIdx = normalizedPath.IndexOf("/server/", StringComparison.OrdinalIgnoreCase);
+                        var remotePath = serverIdx >= 0
+                            ? normalizedPath.Substring(serverIdx + 8) // всё после "/server/"
+                            : $"{projectName}/textures/{System.IO.Path.GetFileName(x.Ktx2Path)}"; // fallback
+                        return (LocalPath: x.Ktx2Path!, RemotePath: remotePath);
+                    })
                     .ToList();
 
                 var result = await b2Service.UploadBatchAsync(
@@ -286,7 +297,11 @@ namespace AssetProcessor {
                         item.Texture.LastUploadedAt = DateTime.UtcNow;
 
                         // Сохраняем в БД для персистентности между сессиями
-                        var remotePath = $"{projectName}/textures/{System.IO.Path.GetFileName(item.Ktx2Path)}";
+                        var normalizedKtx2 = item.Ktx2Path.Replace('\\', '/');
+                        var srvIdx = normalizedKtx2.IndexOf("/server/", StringComparison.OrdinalIgnoreCase);
+                        var remotePath = srvIdx >= 0
+                            ? normalizedKtx2.Substring(srvIdx + 8)
+                            : $"{projectName}/textures/{System.IO.Path.GetFileName(item.Ktx2Path)}";
                         await uploadStateService.SaveUploadAsync(new Data.UploadRecord {
                             LocalPath = item.Ktx2Path,
                             RemotePath = remotePath,

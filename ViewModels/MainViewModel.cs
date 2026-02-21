@@ -1063,7 +1063,7 @@ namespace AssetProcessor.ViewModels {
                     TexturePreviewLoaded?.Invoke(this, new TexturePreviewLoadedEventArgs(texture, preview));
                 }
             } catch (Exception ex) {
-                logger.Warn(ex, "Failed to load KTX2 preview");
+                logger.Warn(ex, $"Failed to load KTX2 preview for: {texture.Path}");
             }
         }
 

@@ -82,7 +82,9 @@ public sealed class TextureProcessingService : ITextureProcessingService {
                 var sourceDir = Path.GetDirectoryName(texture.Path) ?? Environment.CurrentDirectory;
                 var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
                 var extension = compressionSettings.OutputFormat == OutputFormat.KTX2 ? ".ktx2" : ".basis";
-                var outputPath = Path.Combine(sourceDir, sourceFileName + extension);
+                var projectsRoot = AppSettings.Default.ProjectsFolderPath;
+                var outputPath = BuildServerOutputPath(texture.Path, projectsRoot, extension)
+                    ?? Path.Combine(sourceDir, sourceFileName + extension);
 
                 logService.LogInfo("=== CONVERSION START ===");
                 logService.LogInfo($"  Texture Name: {texture.Name}");
@@ -254,6 +256,42 @@ public sealed class TextureProcessingService : ITextureProcessingService {
         };
     }
 
+    /// <summary>
+    /// Строит путь вывода в структуре server/, зеркалируя папку assets/.
+    /// Например: {root}/{project}/assets/content/models/props/tex.png → {root}/{project}/server/assets/content/models/props/tex.ktx2
+    /// </summary>
+    private static string? BuildServerOutputPath(string sourcePath, string? projectsRoot, string extension) {
+        if (string.IsNullOrWhiteSpace(projectsRoot)) return null;
+
+        var normalizedSource = sourcePath.Replace('\\', '/');
+        var normalizedRoot = projectsRoot.TrimEnd('/', '\\').Replace('\\', '/');
+
+        if (!normalizedSource.StartsWith(normalizedRoot + '/', StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        // remainder = "{ProjectName}/assets/content/{relPath}"
+        var remainder = normalizedSource.Substring(normalizedRoot.Length + 1);
+        const string assetsMarker = "/assets/";
+        var assetsIdx = remainder.IndexOf(assetsMarker, StringComparison.OrdinalIgnoreCase);
+        if (assetsIdx < 0) return null;
+
+        var projectName = remainder.Substring(0, assetsIdx);
+        // relPath уже содержит "content/..." — зеркалируем assets/ → server/assets/
+        var relPath = remainder.Substring(assetsIdx + assetsMarker.Length);
+        var relDir = Path.GetDirectoryName(relPath) ?? "";
+        var baseName = Path.GetFileNameWithoutExtension(relPath);
+
+        var outputPath = Path.Combine(
+            normalizedRoot.Replace('/', Path.DirectorySeparatorChar),
+            projectName,
+            "server", "assets",
+            relDir,
+            baseName + extension);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        return outputPath;
+    }
+
     private static (bool fileFound, long fileSize, string? actualPath) TryResolveOutputFile(string expectedPath, string extension) {
         if (File.Exists(expectedPath)) {
             var fileInfo = new FileInfo(expectedPath);
@@ -281,10 +319,35 @@ public sealed class TextureProcessingService : ITextureProcessingService {
     }
 
     private string? GetExistingKtx2Path(string? sourcePath) {
+        // Определяем папку проекта из пути исходника, чтобы KtxPathResolver
+        // искал в {project}/server/assets/content/, а не в корне проектов
+        var projectFolder = ResolveProjectFolder(sourcePath, AppSettings.Default.ProjectsFolderPath)
+            ?? AppSettings.Default.ProjectsFolderPath;
         return KtxPathResolver.FindExistingKtxPath(
             sourcePath,
-            AppSettings.Default.ProjectsFolderPath,
+            projectFolder,
             () => TextureConversionSettingsManager.LoadSettings(),
             logService);
+    }
+
+    /// <summary>
+    /// Извлекает папку проекта из пути исходника: {root}/{ProjectName}/assets/... → {root}/{ProjectName}
+    /// </summary>
+    private static string? ResolveProjectFolder(string? sourcePath, string? projectsRoot) {
+        if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(projectsRoot))
+            return null;
+
+        var normalizedSource = sourcePath.Replace('\\', '/');
+        var normalizedRoot = projectsRoot.TrimEnd('/', '\\').Replace('\\', '/');
+
+        if (!normalizedSource.StartsWith(normalizedRoot + '/', StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var remainder = normalizedSource.Substring(normalizedRoot.Length + 1);
+        var assetsIdx = remainder.IndexOf("/assets/", StringComparison.OrdinalIgnoreCase);
+        if (assetsIdx < 0) return null;
+
+        var projectName = remainder.Substring(0, assetsIdx);
+        return Path.Combine(projectsRoot, projectName);
     }
 }

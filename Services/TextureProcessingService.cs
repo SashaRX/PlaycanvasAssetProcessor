@@ -82,7 +82,9 @@ public sealed class TextureProcessingService : ITextureProcessingService {
                 var sourceDir = Path.GetDirectoryName(texture.Path) ?? Environment.CurrentDirectory;
                 var sourceFileName = Path.GetFileNameWithoutExtension(texture.Path);
                 var extension = compressionSettings.OutputFormat == OutputFormat.KTX2 ? ".ktx2" : ".basis";
-                var outputPath = Path.Combine(sourceDir, sourceFileName + extension);
+                var projectsRoot = AppSettings.Default.ProjectsFolderPath;
+                var outputPath = BuildServerOutputPath(texture.Path, projectsRoot, extension)
+                    ?? Path.Combine(sourceDir, sourceFileName + extension);
 
                 logService.LogInfo("=== CONVERSION START ===");
                 logService.LogInfo($"  Texture Name: {texture.Name}");
@@ -252,6 +254,41 @@ public sealed class TextureProcessingService : ITextureProcessingService {
             "height" => TextureConversion.Core.TextureType.Height,
             _ => TextureConversion.Core.TextureType.Generic
         };
+    }
+
+    /// <summary>
+    /// Строит путь вывода в структуре server/assets/content/, зеркалируя папку assets/.
+    /// Например: {root}/{project}/assets/Props/brickwall.png → {root}/{project}/server/assets/content/Props/brickwall.ktx2
+    /// </summary>
+    private static string? BuildServerOutputPath(string sourcePath, string? projectsRoot, string extension) {
+        if (string.IsNullOrWhiteSpace(projectsRoot)) return null;
+
+        var normalizedSource = sourcePath.Replace('\\', '/');
+        var normalizedRoot = projectsRoot.TrimEnd('/', '\\').Replace('\\', '/');
+
+        if (!normalizedSource.StartsWith(normalizedRoot + '/', StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        // remainder = "{ProjectName}/assets/{relPath}"
+        var remainder = normalizedSource.Substring(normalizedRoot.Length + 1);
+        const string assetsMarker = "/assets/";
+        var assetsIdx = remainder.IndexOf(assetsMarker, StringComparison.OrdinalIgnoreCase);
+        if (assetsIdx < 0) return null;
+
+        var projectName = remainder.Substring(0, assetsIdx);
+        var relPath = remainder.Substring(assetsIdx + assetsMarker.Length); // "folder/file.png"
+        var relDir = Path.GetDirectoryName(relPath) ?? "";
+        var baseName = Path.GetFileNameWithoutExtension(relPath);
+
+        var outputPath = Path.Combine(
+            normalizedRoot.Replace('/', Path.DirectorySeparatorChar),
+            projectName,
+            "server", "assets", "content",
+            relDir,
+            baseName + extension);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+        return outputPath;
     }
 
     private static (bool fileFound, long fileSize, string? actualPath) TryResolveOutputFile(string expectedPath, string extension) {

@@ -16,6 +16,36 @@ public static class Ktx2TextureLoader {
     // Lock object for libktx calls - libktx may not be fully thread-safe
     private static readonly object _libktxLock = new object();
 
+    [System.Runtime.InteropServices.UnmanagedFunctionPointer(System.Runtime.InteropServices.CallingConvention.Cdecl)]
+    private delegate void DestroyDelegate(IntPtr texture);
+
+    /// <summary>
+    /// Уничтожает ktxTexture через named export, с fallback на vtable dispatch.
+    /// ktxTexture_Destroy может отсутствовать в кастомных сборках libktx,
+    /// но Destroy ВСЕГДА первый элемент vtbl (структура ktxTexture_vtbl).
+    /// Layout: texturePtr[8] = vtbl*, vtbl[0] = Destroy function ptr.
+    /// </summary>
+    private static void SafeDestroyTexture(IntPtr textureHandle) {
+        if (textureHandle == IntPtr.Zero) return;
+
+        try {
+            LibKtxNative.ktxTexture_Destroy(textureHandle);
+        } catch (EntryPointNotFoundException) {
+            try {
+                // Dispatch via vtable: textureHandle->vtbl->Destroy(textureHandle)
+                IntPtr vtbl = Marshal.ReadIntPtr(textureHandle, 8);
+                IntPtr destroyFn = Marshal.ReadIntPtr(vtbl, 0);
+                if (destroyFn != IntPtr.Zero) {
+                    var destroy = Marshal.GetDelegateForFunctionPointer<DestroyDelegate>(destroyFn);
+                    destroy(textureHandle);
+                }
+            } catch {
+                // If vtable dispatch also fails — accept memory leak for this preview
+                Trace.WriteLine("[KTX2LOADER] WARN: ktxTexture_Destroy not available and vtable dispatch failed; texture memory leaked");
+            }
+        }
+    }
+
     /// <summary>
     /// Load a KTX2 texture from a file path.
     /// </summary>
@@ -74,7 +104,7 @@ public static class Ktx2TextureLoader {
                     return textureData;
                 } finally {
                     DiagLog("[KTX2LOADER] Destroying texture handle...");
-                    LibKtxNative.ktxTexture_Destroy(textureHandle);
+                    SafeDestroyTexture(textureHandle);
                 }
             } finally {
                 DiagLog("[KTX2LOADER] Freeing unmanaged memory...");
@@ -281,7 +311,7 @@ public static class Ktx2TextureLoader {
             try {
                 return LoadFromHandle(textureHandle, ""); // No filePath for memory loading
             } finally {
-                LibKtxNative.ktxTexture_Destroy(textureHandle);
+                SafeDestroyTexture(textureHandle);
             }
         } finally {
             Marshal.FreeHGlobal(dataPtr);

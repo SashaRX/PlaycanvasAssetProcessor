@@ -408,10 +408,11 @@ internal static class LibKtxNative {
         out IntPtr newTex);
 
     /// <summary>
-    /// Destroy a KTX2 texture and free memory.
+    /// Destroy a KTX texture and free memory. Works for both ktxTexture1 and ktxTexture2.
+    /// Note: ktxTexture2_Destroy does not exist in the ktx DLL — use ktxTexture_Destroy.
     /// </summary>
     [DllImport(DllName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern void ktxTexture2_Destroy(IntPtr texture);
+    public static extern void ktxTexture_Destroy(IntPtr texture);
 
     /// <summary>
     /// Check if texture needs transcoding (is Basis Universal compressed).

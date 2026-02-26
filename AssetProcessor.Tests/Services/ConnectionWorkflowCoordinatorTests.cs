@@ -32,6 +32,19 @@ public class ConnectionWorkflowCoordinatorTests {
         Assert.Equal("Missing files found! Click Download to get them.", result.Message);
     }
 
+
+    [Fact]
+    public async Task EvaluateRefreshAsync_ReturnsCombinedReason_WhenUpdatesAndMissingFiles() {
+        var sut = new ConnectionWorkflowCoordinator();
+
+        var result = await sut.EvaluateRefreshAsync(() => Task.FromResult(true), () => true);
+
+        Assert.Equal(ConnectionState.NeedsDownload, result.State);
+        Assert.True(result.HasUpdates);
+        Assert.True(result.HasMissingFiles);
+        Assert.Equal("updates available and missing files", result.ProjectStateReason);
+    }
+
     [Fact]
     public async Task EvaluatePostDownloadAsync_ReturnsUpToDate_WhenNoUpdatesOrMissingFiles() {
         var sut = new ConnectionWorkflowCoordinator();

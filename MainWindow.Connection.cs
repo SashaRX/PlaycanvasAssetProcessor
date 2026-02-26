@@ -264,11 +264,7 @@ namespace AssetProcessor {
                     hasUpdates,
                     hasMissingFiles);
 
-                if (stateResult.State == ConnectionState.NeedsDownload) {
-                    logService.LogInfo($"CheckProjectState: {stateResult.ProjectStateReason}");
-                } else {
-                    logService.LogInfo("Project is up to date");
-                }
+                logService.LogInfo($"CheckProjectState: {stateResult.ProjectStateReason}");
 
                 UpdateConnectionButton(stateResult.State);
             } catch (Exception ex) {

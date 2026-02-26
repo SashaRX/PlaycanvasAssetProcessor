@@ -197,7 +197,7 @@ namespace AssetProcessor {
                 ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
                 var (loadValidation, projectsBinding) = BuildValidatedProjectsBinding(projectsResult);
 
-                await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {loadValidation.UserId}"));
+                await UpdateConnectedUserStatusAsync(loadValidation.UserId);
 
                 if (!projectsBinding.HasProjects) {
                     throw new Exception("Project list is empty");
@@ -507,6 +507,11 @@ namespace AssetProcessor {
 
 
 
+
+        private async Task UpdateConnectedUserStatusAsync(string? userId) {
+            await Dispatcher.InvokeAsync(() => UpdateConnectionStatus(true, $"by userID: {userId}"));
+        }
+
         private string GetRequiredApiKey(string errorMessage) {
             if (!TryGetApiKey(out string apiKey)) {
                 throw new Exception(errorMessage);
@@ -569,7 +574,7 @@ namespace AssetProcessor {
                     username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
                 var (loadValidation, projectsBinding) = BuildValidatedProjectsBinding(projectsResult);
 
-                UpdateConnectionStatus(true, $"by userID: {loadValidation.UserId}");
+                await UpdateConnectedUserStatusAsync(loadValidation.UserId);
                 if (projectsBinding.HasProjects) {
                     bool projectSelected = await ApplyProjectsBindingAsync(projectsBinding, cancellationToken);
                     if (projectSelected) {

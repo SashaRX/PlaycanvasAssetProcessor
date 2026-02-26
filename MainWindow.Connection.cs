@@ -195,13 +195,9 @@ namespace AssetProcessor {
                 string username = GetRequiredUsername();
 
                 ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
-                var (loadValidation, projectsBinding) = BuildValidatedProjectsBinding(projectsResult);
+                var (loadValidation, projectsBinding) = BuildValidatedProjectsBinding(projectsResult, requireProjects: true);
 
                 await UpdateConnectedUserStatusAsync(loadValidation.UserId);
-
-                if (!projectsBinding.HasProjects) {
-                    throw new Exception("Project list is empty");
-                }
 
                 bool projectSelected = await ApplyProjectsBindingAsync(projectsBinding, cancellationToken);
                 if (projectSelected) {
@@ -529,7 +525,7 @@ namespace AssetProcessor {
             return username;
         }
 
-        private (ConnectionProjectsLoadResult LoadValidation, ConnectionProjectsBindingResult ProjectsBinding) BuildValidatedProjectsBinding(ProjectSelectionResult projectsResult) {
+        private (ConnectionProjectsLoadResult LoadValidation, ConnectionProjectsBindingResult ProjectsBinding) BuildValidatedProjectsBinding(ProjectSelectionResult projectsResult, bool requireProjects) {
             var loadValidation = connectionWorkflowCoordinator.ValidateProjectsLoad(projectsResult);
             if (!loadValidation.IsValid) {
                 throw new Exception(loadValidation.ErrorMessage);
@@ -538,6 +534,10 @@ namespace AssetProcessor {
             var projectsBinding = connectionWorkflowCoordinator.BuildProjectsBinding(
                 projectsResult.Projects,
                 projectsResult.SelectedProjectId);
+
+            if (requireProjects && !projectsBinding.HasProjects) {
+                throw new Exception("Project list is empty");
+            }
 
             return (loadValidation, projectsBinding);
         }
@@ -572,7 +572,7 @@ namespace AssetProcessor {
 
                 ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(
                     username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
-                var (loadValidation, projectsBinding) = BuildValidatedProjectsBinding(projectsResult);
+                var (loadValidation, projectsBinding) = BuildValidatedProjectsBinding(projectsResult, requireProjects: false);
 
                 await UpdateConnectedUserStatusAsync(loadValidation.UserId);
                 if (projectsBinding.HasProjects) {

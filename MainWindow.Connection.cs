@@ -215,24 +215,10 @@ namespace AssetProcessor {
                     throw new Exception("Project list is empty");
                 }
 
-                viewModel.Projects.Clear();
-                foreach (var project in projectsBinding.Projects) {
-                    viewModel.Projects.Add(project);
+                bool projectSelected = await ApplyProjectsBindingAsync(projectsBinding, cancellationToken);
+                if (projectSelected) {
+                    await CheckProjectState();
                 }
-
-                projectSelectionService.SetProjectInitializationInProgress(true);
-                try {
-                    viewModel.SelectedProjectId = projectsBinding.SelectedProjectId;
-                } finally {
-                    projectSelectionService.SetProjectInitializationInProgress(false);
-                }
-
-                if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
-                    await viewModel.LoadBranchesCommand.ExecuteAsync(cancellationToken);
-                    UpdateProjectPath();
-                }
-
-                await CheckProjectState();
             } catch (Exception ex) {
                 MessageBox.Show($"Error: {ex.Message}");
                 UpdateConnectionButton(ConnectionState.Disconnected);
@@ -530,6 +516,29 @@ namespace AssetProcessor {
             UpdateConnectionButton(state);
         }
 
+
+        private async Task<bool> ApplyProjectsBindingAsync(ConnectionProjectsBindingResult projectsBinding, CancellationToken cancellationToken) {
+            viewModel.Projects.Clear();
+            foreach (var project in projectsBinding.Projects) {
+                viewModel.Projects.Add(project);
+            }
+
+            projectSelectionService.SetProjectInitializationInProgress(true);
+            try {
+                viewModel.SelectedProjectId = projectsBinding.SelectedProjectId;
+            } finally {
+                projectSelectionService.SetProjectInitializationInProgress(false);
+            }
+
+            if (string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
+                return false;
+            }
+
+            await viewModel.LoadBranchesCommand.ExecuteAsync(cancellationToken);
+            UpdateProjectPath();
+            return true;
+        }
+
         private async Task LoadLastSettings() {
             try {
                 if (!TryGetApiKey(out string apiKey)) {
@@ -556,21 +565,8 @@ namespace AssetProcessor {
                     projectsResult.Projects,
                     projectsResult.SelectedProjectId);
                 if (projectsBinding.HasProjects) {
-                    viewModel.Projects.Clear();
-                    foreach (var project in projectsBinding.Projects) {
-                        viewModel.Projects.Add(project);
-                    }
-
-                    projectSelectionService.SetProjectInitializationInProgress(true);
-                    try {
-                        viewModel.SelectedProjectId = projectsBinding.SelectedProjectId;
-                    } finally {
-                        projectSelectionService.SetProjectInitializationInProgress(false);
-                    }
-
-                    if (!string.IsNullOrEmpty(viewModel.SelectedProjectId)) {
-                        await viewModel.LoadBranchesCommand.ExecuteAsync(cancellationToken);
-                        UpdateProjectPath();
+                    bool projectSelected = await ApplyProjectsBindingAsync(projectsBinding, cancellationToken);
+                    if (projectSelected) {
                         await SmartLoadAssets();
                     }
                 }

@@ -475,23 +475,13 @@ namespace AssetProcessor {
                 string? selectedBranchId = viewModel.SelectedBranchId;
                 bool hasSelection = !string.IsNullOrEmpty(selectedProjectId) && !string.IsNullOrEmpty(selectedBranchId);
                 if (!hasSelection) {
-                    UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
-                        hasSelection: false,
-                        hasProjectPath: false,
-                        assetsLoaded: false,
-                        updatesCheckSucceeded: false,
-                        hasUpdates: false));
+                    UpdateSmartLoadState(hasSelection: false, hasProjectPath: false, assetsLoaded: false, updatesCheckSucceeded: false, hasUpdates: false);
                     return;
                 }
 
                 bool hasProjectPath = !string.IsNullOrEmpty(ProjectFolderPath);
                 if (!hasProjectPath) {
-                    UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
-                        hasSelection: true,
-                        hasProjectPath: false,
-                        assetsLoaded: false,
-                        updatesCheckSucceeded: false,
-                        hasUpdates: false));
+                    UpdateSmartLoadState(hasSelection: true, hasProjectPath: false, assetsLoaded: false, updatesCheckSucceeded: false, hasUpdates: false);
                     return;
                 }
 
@@ -502,12 +492,7 @@ namespace AssetProcessor {
 
                 if (assetsLoaded) {
                     if (!TryGetApiKey(out string apiKey)) {
-                        UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
-                            hasSelection: true,
-                            hasProjectPath: true,
-                            assetsLoaded: true,
-                            updatesCheckSucceeded: false,
-                            hasUpdates: false));
+                        UpdateSmartLoadState(hasSelection: true, hasProjectPath: true, assetsLoaded: true, updatesCheckSucceeded: false, hasUpdates: false);
                         return;
                     }
 
@@ -520,33 +505,29 @@ namespace AssetProcessor {
 
                     if (!checkResult.Success) {
                         logger.Warn($"SmartLoadAssets: Failed to check for updates: {checkResult.Error}");
-                        UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
-                            hasSelection: true,
-                            hasProjectPath: true,
-                            assetsLoaded: true,
-                            updatesCheckSucceeded: false,
-                            hasUpdates: false));
+                        UpdateSmartLoadState(hasSelection: true, hasProjectPath: true, assetsLoaded: true, updatesCheckSucceeded: false, hasUpdates: false);
                         return;
                     }
 
-                    UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
-                        hasSelection: true,
-                        hasProjectPath: true,
-                        assetsLoaded: true,
-                        updatesCheckSucceeded: true,
-                        hasUpdates: checkResult.HasUpdates));
+                    UpdateSmartLoadState(hasSelection: true, hasProjectPath: true, assetsLoaded: true, updatesCheckSucceeded: true, hasUpdates: checkResult.HasUpdates);
                 } else {
-                    UpdateConnectionButton(connectionWorkflowCoordinator.EvaluateSmartLoadState(
-                        hasSelection: true,
-                        hasProjectPath: true,
-                        assetsLoaded: false,
-                        updatesCheckSucceeded: false,
-                        hasUpdates: false));
+                    UpdateSmartLoadState(hasSelection: true, hasProjectPath: true, assetsLoaded: false, updatesCheckSucceeded: false, hasUpdates: false);
                 }
             } catch (Exception ex) {
                 logger.Error(ex, "Error in SmartLoadAssets");
                 UpdateConnectionButton(ConnectionState.NeedsDownload);
             }
+        }
+
+
+        private void UpdateSmartLoadState(bool hasSelection, bool hasProjectPath, bool assetsLoaded, bool updatesCheckSucceeded, bool hasUpdates) {
+            var state = connectionWorkflowCoordinator.EvaluateSmartLoadState(
+                hasSelection,
+                hasProjectPath,
+                assetsLoaded,
+                updatesCheckSucceeded,
+                hasUpdates);
+            UpdateConnectionButton(state);
         }
 
         private async Task LoadLastSettings() {

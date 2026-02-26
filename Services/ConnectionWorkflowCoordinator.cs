@@ -23,7 +23,12 @@ public sealed class ConnectionWorkflowCoordinator : IConnectionWorkflowCoordinat
 
     public ConnectionWorkflowResult EvaluateProjectState(bool hasProjectFolder, bool hasProjectName, bool assetsListExists, bool hasUpdates, bool hasMissingFiles) {
         if (!hasProjectFolder || !hasProjectName || !assetsListExists) {
-            return BuildResult(hasUpdates: false, hasMissingFiles: true);
+            return new ConnectionWorkflowResult {
+                State = ConnectionState.NeedsDownload,
+                HasUpdates = false,
+                HasMissingFiles = true,
+                HasRequiredProjectData = false
+            };
         }
 
         return BuildResult(hasUpdates, hasMissingFiles);

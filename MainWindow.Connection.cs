@@ -265,12 +265,7 @@ namespace AssetProcessor {
                     hasMissingFiles);
 
                 if (stateResult.State == ConnectionState.NeedsDownload) {
-                    string reason = stateResult.HasUpdates && stateResult.HasMissingFiles
-                        ? "updates available and missing files"
-                        : stateResult.HasUpdates
-                            ? "updates available"
-                            : "missing files or project is not downloaded";
-                    logService.LogInfo($"CheckProjectState: {reason}");
+                    logService.LogInfo($"CheckProjectState: {stateResult.ProjectStateReason}");
                 } else {
                     logService.LogInfo("Project is up to date");
                 }

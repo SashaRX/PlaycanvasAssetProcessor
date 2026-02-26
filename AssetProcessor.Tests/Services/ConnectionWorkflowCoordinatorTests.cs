@@ -15,6 +15,7 @@ public class ConnectionWorkflowCoordinatorTests {
 
         Assert.Equal(ConnectionState.NeedsDownload, result.State);
         Assert.True(result.HasUpdates);
+        Assert.Equal("updates available", result.ProjectStateReason);
         Assert.Equal("Updates available! Click Download to get them.", result.Message);
     }
 
@@ -26,6 +27,8 @@ public class ConnectionWorkflowCoordinatorTests {
 
         Assert.Equal(ConnectionState.NeedsDownload, result.State);
         Assert.True(result.HasMissingFiles);
+        Assert.True(result.HasRequiredProjectData);
+        Assert.Equal("missing files", result.ProjectStateReason);
         Assert.Equal("Missing files found! Click Download to get them.", result.Message);
     }
 
@@ -52,6 +55,8 @@ public class ConnectionWorkflowCoordinatorTests {
 
         Assert.Equal(ConnectionState.NeedsDownload, result.State);
         Assert.True(result.HasMissingFiles);
+        Assert.False(result.HasRequiredProjectData);
+        Assert.Equal("missing files or project is not downloaded", result.ProjectStateReason);
     }
 
     [Fact]
@@ -68,6 +73,7 @@ public class ConnectionWorkflowCoordinatorTests {
         Assert.Equal(ConnectionState.UpToDate, result.State);
         Assert.False(result.HasUpdates);
         Assert.False(result.HasMissingFiles);
+        Assert.Equal("up to date", result.ProjectStateReason);
     }
 
     [Fact]
@@ -83,6 +89,7 @@ public class ConnectionWorkflowCoordinatorTests {
 
         Assert.Equal(ConnectionState.NeedsDownload, result.State);
         Assert.True(result.HasUpdates);
+        Assert.Equal("updates available", result.ProjectStateReason);
     }
 
     [Fact]

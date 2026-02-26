@@ -191,14 +191,8 @@ namespace AssetProcessor {
             }
 
             try {
-                if (!TryGetApiKey(out string apiKey)) {
-                    throw new Exception("Failed to decrypt API key");
-                }
-
-                string? username = credentialsService.Username;
-                if (string.IsNullOrEmpty(username)) {
-                    throw new Exception("Username is null or empty");
-                }
+                string apiKey = GetRequiredApiKey("Failed to decrypt API key");
+                string username = GetRequiredUsername();
 
                 ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
                 var (loadValidation, projectsBinding) = BuildValidatedProjectsBinding(projectsResult);
@@ -512,6 +506,24 @@ namespace AssetProcessor {
 
 
 
+
+        private string GetRequiredApiKey(string errorMessage) {
+            if (!TryGetApiKey(out string apiKey)) {
+                throw new Exception(errorMessage);
+            }
+
+            return apiKey;
+        }
+
+        private string GetRequiredUsername() {
+            string? username = credentialsService.Username;
+            if (string.IsNullOrEmpty(username)) {
+                throw new Exception("Username is null or empty");
+            }
+
+            return username;
+        }
+
         private (ConnectionProjectsLoadResult LoadValidation, ConnectionProjectsBindingResult ProjectsBinding) BuildValidatedProjectsBinding(ProjectSelectionResult projectsResult) {
             var loadValidation = connectionWorkflowCoordinator.ValidateProjectsLoad(projectsResult);
             if (!loadValidation.IsValid) {
@@ -549,16 +561,9 @@ namespace AssetProcessor {
 
         private async Task LoadLastSettings() {
             try {
-                if (!TryGetApiKey(out string apiKey)) {
-                    throw new Exception("API key is null or empty after decryption");
-                }
-
+                string apiKey = GetRequiredApiKey("API key is null or empty after decryption");
                 CancellationToken cancellationToken = new();
-
-                string? username = credentialsService.Username;
-                if (string.IsNullOrEmpty(username)) {
-                    throw new Exception("Username is null or empty");
-                }
+                string username = GetRequiredUsername();
 
                 ProjectSelectionResult projectsResult = await projectSelectionService.LoadProjectsAsync(
                     username, apiKey, AppSettings.Default.LastSelectedProjectId, cancellationToken);
